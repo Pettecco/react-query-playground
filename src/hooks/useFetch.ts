@@ -19,6 +19,7 @@ type QueryOutput<Data> = {
   isError: boolean;
   error: Error | null;
   data?: Data;
+  isFetching: boolean;
   refetch: () => Promise<void>;
 };
 
@@ -35,6 +36,7 @@ export const useFetch = <Data>({
     isError,
     error,
     data,
+    isFetching,
     refetch: refetchFn,
   } = useQuery({
     queryKey: key,
@@ -55,8 +57,9 @@ export const useFetch = <Data>({
       isError,
       error: error ?? null,
       data,
+      isFetching,
       refetch,
     }),
-    [isLoading, isError, error, data, refetch]
+    [isLoading, isError, error, data, isFetching, refetch]
   );
 };

@@ -15,3 +15,9 @@ export interface Pokemon {
   name: string;
   imageUrl: string;
 }
+
+export interface PokemonPage {
+  pokemons: Pokemon[];
+  count: number;
+  hasNext: boolean;
+}
