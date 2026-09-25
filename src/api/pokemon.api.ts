@@ -1,6 +1,7 @@
 import type {
   PokemonDetailResponse,
   PokemonListResponse,
+  PokemonSpeciesResponse,
 } from '../types/pokemon.types';
 
 const BASE_URL = 'https://pokeapi.co/api/v2';
@@ -41,4 +42,11 @@ export function getPokemon(
   signal?: AbortSignal
 ): Promise<PokemonDetailResponse> {
   return request<PokemonDetailResponse>(`/pokemon/${id}`, { signal });
+}
+
+export function getPokemonSpecies(
+  id: number,
+  signal?: AbortSignal
+): Promise<PokemonSpeciesResponse> {
+  return request<PokemonSpeciesResponse>(`/pokemon-species/${id}`, { signal });
 }

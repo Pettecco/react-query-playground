@@ -55,3 +55,29 @@ export interface PokemonDetail {
     base: number;
   }[];
 }
+
+export interface PokemonSpeciesResponse {
+  id: number;
+  flavor_text_entries: {
+    flavor_text: string;
+    language: { name: string };
+    version: { name: string };
+  }[];
+  genera: {
+    genus: string;
+    language: { name: string };
+  }[];
+  gender_rate: number;
+  habitat: { name: string } | null;
+  generation: { name: string };
+  evolution_chain: { url: string };
+}
+
+export interface PokemonSpecies {
+  description: string;
+  genus: string;
+  gender: { male: number; female: number } | null;
+  habitat: string | null;
+  generation: string;
+  evolutionChainUrl: string;
+}
