@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { usePokemons } from './hooks';
 import { POKEMON_LIMIT } from './api';
+import type { Pokemon } from './types';
 import {
   ErrorState,
   LoadingState,
   Pagination,
   PokemonGrid,
+  PokemonModal,
 } from './components';
 
 function App() {
   const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState<Pokemon | null>(null);
 
   const { data, isLoading, isError, error, isFetching, refetch } =
     usePokemons(page);
@@ -33,7 +36,7 @@ function App() {
         )}
       </div>
 
-      <PokemonGrid pokemons={data?.pokemons ?? []} />
+      <PokemonGrid pokemons={data?.pokemons ?? []} onSelect={setSelected} />
 
       <Pagination
         page={page}
@@ -41,6 +44,10 @@ function App() {
         hasNext={data?.hasNext ?? false}
         onPageChange={setPage}
       />
+
+      {selected && (
+        <PokemonModal pokemon={selected} onClose={() => setSelected(null)} />
+      )}
     </div>
   );
 }

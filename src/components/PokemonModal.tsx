@@ -26,7 +26,17 @@ export const PokemonModal = ({ pokemon, onClose }: PokemonModalProps) => {
         className="mx-auto mt-20 max-w-md rounded-2xl bg-white p-6"
         onClick={e => e.stopPropagation()}
       >
-        {/* header: sprite + nome + #id (props, instantâneo) */}
+        <div className="flex flex-col items-center gap-1 border-b border-gray-100 pb-4">
+          <img
+            src={pokemon.imageUrl}
+            alt={pokemon.name}
+            className="h-24 w-24 object-contain [image-rendering:pixelated]"
+          />
+          <span className="text-lg font-bold text-gray-900 capitalize">
+            {pokemon.name}
+          </span>
+          <span className="text-sm text-gray-500">#{pokemon.id}</span>
+        </div>
 
         <ErrorBoundary fallback={<p>Erro ao carregar detalhes</p>}>
           <Suspense fallback={<PokemonDetailSkeleton />}>
@@ -85,7 +95,9 @@ const PokemonDetailContent = ({ id }: { id: number }) => {
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
                 <div
                   className="h-full rounded-full bg-blue-500"
-                  style={{ width: `${Math.min((stat.base / 255) * 100, 100)}%` }}
+                  style={{
+                    width: `${Math.min((stat.base / 255) * 100, 100)}%`,
+                  }}
                 />
               </div>
               <span className="w-8 text-right text-xs font-medium text-gray-900">
