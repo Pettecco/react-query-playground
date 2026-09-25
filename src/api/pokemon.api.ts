@@ -1,4 +1,7 @@
-import type { PokemonListResponse } from '../types/pokemon.types';
+import type {
+  PokemonDetailResponse,
+  PokemonListResponse,
+} from '../types/pokemon.types';
 
 const BASE_URL = 'https://pokeapi.co/api/v2';
 const POKEMON_LIMIT = 20;
@@ -31,4 +34,11 @@ export function getPokemons(
     limit: String(POKEMON_LIMIT),
   });
   return request<PokemonListResponse>(`/pokemon?${params}`, { signal });
+}
+
+export function getPokemon(
+  id: number,
+  signal?: AbortSignal
+): Promise<PokemonDetailResponse> {
+  return request<PokemonDetailResponse>(`/pokemon/${id}`, { signal });
 }

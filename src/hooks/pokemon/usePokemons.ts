@@ -1,5 +1,4 @@
-import { getPokemons } from '../../api';
-import { mapPokemonListItem } from '../../api/pokemon.mapper';
+import { getPokemons, mapPokemonListItem } from '../../api';
 import { useFetch } from '../useFetch';
 
 export const usePokemons = (page: number) =>
