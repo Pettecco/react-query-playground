@@ -6,3 +6,4 @@ export * from './Pagination';
 export * from './ErrorBoundary';
 export * from './PokemonDetailSkeleton';
 export * from './PokemonModal';
+export * from './ModalShell';
