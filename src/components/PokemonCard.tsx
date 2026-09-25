@@ -2,11 +2,15 @@ import type { Pokemon } from '../types';
 
 interface PokemonCardProps {
   pokemon: Pokemon;
+  onSelect?: () => void;
 }
 
-export function PokemonCard({ pokemon }: PokemonCardProps) {
+export function PokemonCard({ pokemon, onSelect }: PokemonCardProps) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border p-4 transition-shadow hover:shadow-md">
+    <div
+      onClick={onSelect}
+      className="flex flex-col items-center gap-2 rounded-xl border p-4 transition-shadow hover:shadow-md cursor-pointer"
+    >
       <img
         src={pokemon.imageUrl}
         alt={pokemon.name}

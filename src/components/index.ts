@@ -3,3 +3,5 @@ export * from './LoadingState';
 export * from './ErrorState';
 export * from './PokemonGrid';
 export * from './Pagination';
+export * from './ErrorBoundary';
+export * from './PokemonDetailSkeleton';
