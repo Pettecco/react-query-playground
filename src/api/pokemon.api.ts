@@ -1,4 +1,5 @@
 import type {
+  EvolutionChainResponse,
   PokemonDetailResponse,
   PokemonListResponse,
   PokemonSpeciesResponse,
@@ -18,7 +19,8 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, init);
+  const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new ApiError(res.status, `Failure to search ${path} (${res.status})`);
   }
@@ -49,4 +51,11 @@ export function getPokemonSpecies(
   signal?: AbortSignal
 ): Promise<PokemonSpeciesResponse> {
   return request<PokemonSpeciesResponse>(`/pokemon-species/${id}`, { signal });
+}
+
+export function getEvolutionChain(
+  url: string,
+  signal?: AbortSignal
+): Promise<EvolutionChainResponse> {
+  return request<EvolutionChainResponse>(url, { signal });
 }

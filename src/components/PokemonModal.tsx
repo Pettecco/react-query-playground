@@ -1,16 +1,25 @@
 import { Suspense, useEffect } from 'react';
 import type { Pokemon } from '../types';
 import { TYPE_COLORS } from '../types/type-colors';
-import { usePokemonDetail, usePokemonSpecies } from '../hooks';
+import {
+  useEvolutionChain,
+  usePokemonDetail,
+  usePokemonSpecies,
+} from '../hooks';
 import { ErrorBoundary } from './ErrorBoundary';
 import { PokemonDetailSkeleton } from './PokemonDetailSkeleton';
 
 interface PokemonModalProps {
   pokemon: Pokemon;
   onClose: () => void;
+  onSelect?: (pokemon: Pokemon) => void;
 }
 
-export const PokemonModal = ({ pokemon, onClose }: PokemonModalProps) => {
+export const PokemonModal = ({
+  pokemon,
+  onClose,
+  onSelect,
+}: PokemonModalProps) => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -47,6 +56,15 @@ export const PokemonModal = ({ pokemon, onClose }: PokemonModalProps) => {
         <ErrorBoundary fallback={<p>Error loading species</p>}>
           <Suspense fallback={<PokemonDetailSkeleton rows={3} />}>
             <PokemonSpeciesContent id={pokemon.id} />
+          </Suspense>
+        </ErrorBoundary>
+
+        <ErrorBoundary fallback={<p>Error loading evolutions</p>}>
+          <Suspense fallback={<PokemonDetailSkeleton rows={2} />}>
+            <PokemonEvolutionContent
+              id={pokemon.id}
+              onSelect={onSelect}
+            />
           </Suspense>
         </ErrorBoundary>
       </div>
@@ -151,6 +169,82 @@ const PokemonSpeciesContent = ({ id }: { id: number }) => {
               : 'Genderless'}
           </p>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const PokemonEvolutionContent = ({
+  id,
+  onSelect,
+}: {
+  id: number;
+  onSelect?: (pokemon: Pokemon) => void;
+}) => {
+  const { data: species } = usePokemonSpecies(id);
+
+  if (species.evolutionChainUrl) {
+    return (
+      <EvolutionChainContent
+        url={species.evolutionChainUrl}
+        onSelect={onSelect}
+      />
+    );
+  }
+
+  return null;
+};
+
+const EvolutionChainContent = ({
+  url,
+  onSelect,
+}: {
+  url: string;
+  onSelect?: (pokemon: Pokemon) => void;
+}) => {
+  const { data: evolutions } = useEvolutionChain(url);
+
+  if (evolutions.length <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 border-t border-gray-100 pt-4">
+      <h3 className="mb-3 text-sm font-semibold text-gray-900">Evolutions</h3>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {evolutions.map((evolution, index) => (
+          <div key={evolution.speciesId} className="flex items-center gap-2">
+            {index > 0 && (
+              <div className="flex flex-col items-center">
+                <span className="text-gray-400">→</span>
+                {evolution.trigger && (
+                  <span className="max-w-20 text-center text-[10px] leading-tight text-gray-500">
+                    {evolution.trigger}
+                  </span>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() =>
+                onSelect?.({
+                  id: evolution.speciesId,
+                  name: evolution.name,
+                  imageUrl: evolution.imageUrl,
+                })
+              }
+              className="flex flex-col items-center gap-1 rounded-lg p-2 transition-colors hover:bg-gray-50"
+            >
+              <img
+                src={evolution.imageUrl}
+                alt={evolution.name}
+                className="h-16 w-16 object-contain [image-rendering:pixelated]"
+              />
+              <span className="text-xs font-medium capitalize text-gray-900">
+                {evolution.name}
+              </span>
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

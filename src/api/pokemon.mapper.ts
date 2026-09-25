@@ -1,7 +1,10 @@
 import type {
+  ChainLink,
+  EvolutionChainResponse,
   Pokemon,
   PokemonDetail,
   PokemonDetailResponse,
+  PokemonEvolution,
   PokemonListItemRaw,
   PokemonSpecies,
   PokemonSpeciesResponse,
@@ -61,3 +64,60 @@ const mapGender = (
   const female = (genderRate / 8) * 100;
   return { male: 100 - female, female };
 };
+
+export const mapEvolutionChain = (raw: {
+  chain: ChainLink;
+}): PokemonEvolution[] => {
+  const evolutions: PokemonEvolution[] = [];
+  const walk = (link: ChainLink, trigger: string | null): void => {
+    evolutions.push(mapEvolution(link, trigger));
+    for (const next of link.evolves_to) {
+      walk(next, mapTrigger(next.evolution_details[0]));
+    }
+  };
+  walk(raw.chain, null);
+  return evolutions;
+};
+
+const mapEvolution = (
+  link: ChainLink,
+  trigger: string | null
+): PokemonEvolution => {
+  const speciesId = Number(link.species.url.split('/').filter(Boolean).pop());
+
+  return {
+    speciesId,
+    name: link.species.name,
+    imageUrl: `${SPRITES_URL}/${speciesId}.png`,
+    trigger,
+  };
+};
+
+const mapTrigger = (
+  details?: EvolutionChainResponse['chain']['evolution_details'][number]
+): string | null => {
+  if (!details) return null;
+
+  if (details.trigger.name === 'level-up' && details.min_level) {
+    return `Lv. ${details.min_level}`;
+  }
+
+  if (details.trigger.name === 'use-item' && details.item) {
+    return details.item.name.split('-').map(capitalize).join(' ');
+  }
+
+  const parts: string[] = [];
+  if (details.trigger.name === 'level-up' && details.time_of_day) {
+    parts.push(capitalize(details.time_of_day));
+  }
+  if (details.min_happiness) {
+    parts.push('High friendship');
+  }
+
+  return parts.length > 0
+    ? parts.join(' (') + (parts.length > 1 ? ')' : '')
+    : capitalize(details.trigger.name);
+};
+
+const capitalize = (value: string): string =>
+  value.charAt(0).toUpperCase() + value.slice(1);

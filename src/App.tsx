@@ -46,7 +46,11 @@ function App() {
       />
 
       {selected && (
-        <PokemonModal pokemon={selected} onClose={() => setSelected(null)} />
+        <PokemonModal
+          pokemon={selected}
+          onClose={() => setSelected(null)}
+          onSelect={setSelected}
+        />
       )}
     </div>
   );

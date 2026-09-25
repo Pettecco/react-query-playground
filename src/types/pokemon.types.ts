@@ -81,3 +81,29 @@ export interface PokemonSpecies {
   generation: string;
   evolutionChainUrl: string;
 }
+
+export interface EvolutionChainResponse {
+  id: number;
+  chain: ChainLink;
+}
+
+export interface ChainLink {
+  species: { name: string; url: string };
+  evolution_details: EvolutionDetail[];
+  evolves_to: ChainLink[];
+}
+
+export interface EvolutionDetail {
+  trigger: { name: string };
+  min_level: number | null;
+  item: { name: string } | null;
+  time_of_day: string;
+  min_happiness: number | null;
+}
+
+export interface PokemonEvolution {
+  speciesId: number;
+  name: string;
+  imageUrl: string;
+  trigger: string | null;
+}
