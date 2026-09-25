@@ -16,9 +16,12 @@ export const ModalShell = ({ onClose, children }: ModalShellProps) => {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
       <div
-        className="relative mx-auto mt-16 w-full max-w-2xl"
+        className="relative w-full max-w-2xl"
         onClick={e => e.stopPropagation()}
       >
         <button
@@ -40,7 +43,7 @@ export const ModalShell = ({ onClose, children }: ModalShellProps) => {
           </svg>
         </button>
 
-        <div className="max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl bg-white p-8">
+        <div className="max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-8">
           {children}
         </div>
       </div>
