@@ -139,8 +139,8 @@ const PokemonSpeciesContent = ({ id }: { id: number }) => {
         </div>
         <div>
           <h3 className="font-semibold text-gray-900">Generation</h3>
-          <p className="text-gray-600 capitalize">
-            {data.generation.replace('generation-', 'Gen ')}
+          <p className="text-gray-600">
+            Gen {data.generation.replace('generation-', '').toUpperCase()}
           </p>
         </div>
         <div>
