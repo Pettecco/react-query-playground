@@ -10,26 +10,28 @@ export const PokemonDetailContent = ({ id }: PokemonDetailContentProps) => {
 
   return (
     <div className="mt-3 flex flex-col gap-3">
-      <div className="flex gap-6 text-sm text-gray-600">
-        <span>
-          <strong className="text-gray-900">{data.height} m</strong> height
-        </span>
-        <span>
-          <strong className="text-gray-900">{data.weight} kg</strong> weight
-        </span>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {data.types.map(type => (
-          <span
-            key={type}
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium text-white capitalize ${
-              TYPE_COLORS[type] ?? 'bg-gray-300'
-            }`}
-          >
-            {type}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-5 text-sm text-gray-600">
+          <span>
+            <strong className="text-gray-900">{data.height} m</strong> height
           </span>
-        ))}
+          <span>
+            <strong className="text-gray-900">{data.weight} kg</strong> weight
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {data.types.map(type => (
+            <span
+              key={type}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium text-white capitalize ${
+                TYPE_COLORS[type] ?? 'bg-gray-300'
+              }`}
+            >
+              {type}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div>
@@ -53,7 +55,7 @@ export const PokemonDetailContent = ({ id }: PokemonDetailContentProps) => {
               </span>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
                 <div
-                  className="h-full rounded-full bg-blue-500"
+                  className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600"
                   style={{
                     width: `${Math.min((stat.base / 255) * 100, 100)}%`,
                   }}

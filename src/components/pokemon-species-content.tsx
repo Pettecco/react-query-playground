@@ -9,11 +9,11 @@ export const PokemonSpeciesContent = ({ id }: PokemonSpeciesContentProps) => {
 
   return (
     <div className="mt-3 flex flex-col gap-3 border-t border-gray-100 pt-3">
-      <p className="text-sm italic leading-snug text-gray-600">
+      <p className="text-center text-sm italic leading-snug text-gray-600">
         {data.description}
       </p>
 
-      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             Species
