@@ -4,7 +4,7 @@ import type {
 } from '../types/pokemon.types';
 
 const BASE_URL = 'https://pokeapi.co/api/v2';
-const POKEMON_LIMIT = 20;
+export const POKEMON_LIMIT = 20;
 
 export class ApiError extends Error {
   readonly status: number;
