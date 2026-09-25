@@ -40,9 +40,11 @@ const EvolutionChainContent = ({
   }
 
   return (
-    <div className="mt-4 border-t border-gray-100 pt-4">
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">Evolutions</h3>
-      <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="mt-3 border-t border-gray-100 pt-3">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+        Evolutions
+      </h3>
+      <div className="flex flex-wrap items-center justify-center gap-1">
         {evolutions.map((evolution, index) => (
           <div key={evolution.speciesId} className="flex items-center gap-2">
             {index > 0 && (
@@ -63,12 +65,12 @@ const EvolutionChainContent = ({
                   imageUrl: evolution.imageUrl,
                 })
               }
-              className="flex flex-col items-center gap-1 rounded-lg p-2 transition-colors hover:bg-gray-50"
+              className="flex flex-col items-center gap-1 rounded-lg p-1 transition-colors hover:bg-gray-50"
             >
               <img
                 src={evolution.imageUrl}
                 alt={evolution.name}
-                className="h-16 w-16 object-contain [image-rendering:pixelated]"
+                className="h-14 w-14 object-contain [image-rendering:pixelated]"
               />
               <span className="text-xs font-medium text-gray-900 capitalize">
                 {evolution.name}

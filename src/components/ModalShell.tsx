@@ -43,7 +43,7 @@ export const ModalShell = ({ onClose, children }: ModalShellProps) => {
           </svg>
         </button>
 
-        <div className="max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-8">
+        <div className="max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-6">
           {children}
         </div>
       </div>

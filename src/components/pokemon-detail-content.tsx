@@ -9,7 +9,7 @@ export const PokemonDetailContent = ({ id }: PokemonDetailContentProps) => {
   const { data } = usePokemonDetail(id);
 
   return (
-    <div className="mt-4 flex flex-col gap-4">
+    <div className="mt-3 flex flex-col gap-3">
       <div className="flex gap-6 text-sm text-gray-600">
         <span>
           <strong className="text-gray-900">{data.height} m</strong> height
@@ -33,21 +33,25 @@ export const PokemonDetailContent = ({ id }: PokemonDetailContentProps) => {
       </div>
 
       <div>
-        <h3 className="mb-1 text-sm font-semibold text-gray-900">Abilities</h3>
+        <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Abilities
+        </h3>
         <p className="text-sm text-gray-600 capitalize">
           {data.abilities.join(', ')}
         </p>
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-gray-900">Stats</h3>
-        <div className="flex flex-col gap-2">
+        <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Stats
+        </h3>
+        <div className="flex flex-col gap-1.5">
           {data.stats.map(stat => (
             <div key={stat.name} className="flex items-center gap-3">
               <span className="w-32 text-xs text-gray-600 capitalize">
                 {stat.name.replace('-', ' ')}
               </span>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
                 <div
                   className="h-full rounded-full bg-blue-500"
                   style={{

@@ -20,16 +20,16 @@ export const PokemonModal = ({
 }: PokemonModalProps) => {
   return (
     <ModalShell onClose={onClose}>
-      <div className="flex flex-col items-center gap-1 border-b border-gray-100 pb-4">
+      <div className="flex flex-col items-center gap-0.5 border-b border-gray-100 pb-3">
         <img
           src={pokemon.imageUrl}
           alt={pokemon.name}
-          className="h-24 w-24 object-contain [image-rendering:pixelated]"
+          className="h-20 w-20 object-contain [image-rendering:pixelated]"
         />
         <span className="text-lg font-bold text-gray-900 capitalize">
           {pokemon.name}
         </span>
-        <span className="text-sm text-gray-500">#{pokemon.id}</span>
+        <span className="text-xs text-gray-500">#{pokemon.id}</span>
       </div>
 
       <ErrorBoundary fallback={<p>Error loading details</p>}>
