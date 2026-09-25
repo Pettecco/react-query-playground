@@ -18,7 +18,7 @@ function App() {
     usePokemons(page);
 
   if (isLoading) {
-    return <LoadingState message="Carregando pokémons..." />;
+    return <LoadingState message="Loading pokémons..." />;
   }
 
   if (isError) {
@@ -31,7 +31,7 @@ function App() {
         <h1 className="text-2xl font-bold">QueryDex</h1>
         {isFetching && (
           <span className="text-sm text-gray-400 animate-pulse">
-            Atualizando...
+            Updating...
           </span>
         )}
       </div>

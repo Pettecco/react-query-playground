@@ -17,17 +17,17 @@ export const Pagination = ({
       disabled={page === 0}
       className="rounded-lg border px-4 py-2 disabled:opacity-40 hover:bg-gray-50 disabled:hover:bg-transparent"
     >
-      Anterior
+      Previous
     </button>
     <span className="text-sm text-gray-500">
-      Página {page + 1} de {totalPages}
+      Page {page + 1} of {totalPages}
     </span>
     <button
       onClick={() => onPageChange(page + 1)}
       disabled={!hasNext}
       className="rounded-lg border px-4 py-2 disabled:opacity-40 hover:bg-gray-50 disabled:hover:bg-transparent"
     >
-      Próxima
+      Next
     </button>
   </div>
 );

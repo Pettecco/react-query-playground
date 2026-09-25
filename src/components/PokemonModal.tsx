@@ -38,7 +38,7 @@ export const PokemonModal = ({ pokemon, onClose }: PokemonModalProps) => {
           <span className="text-sm text-gray-500">#{pokemon.id}</span>
         </div>
 
-        <ErrorBoundary fallback={<p>Erro ao carregar detalhes</p>}>
+        <ErrorBoundary fallback={<p>Error loading details</p>}>
           <Suspense fallback={<PokemonDetailSkeleton />}>
             <PokemonDetailContent id={pokemon.id} />
           </Suspense>
@@ -55,10 +55,10 @@ const PokemonDetailContent = ({ id }: { id: number }) => {
     <div className="mt-4 flex flex-col gap-4">
       <div className="flex gap-6 text-sm text-gray-600">
         <span>
-          <strong className="text-gray-900">{data.height} m</strong> de altura
+          <strong className="text-gray-900">{data.height} m</strong> height
         </span>
         <span>
-          <strong className="text-gray-900">{data.weight} kg</strong> de peso
+          <strong className="text-gray-900">{data.weight} kg</strong> weight
         </span>
       </div>
 
@@ -77,7 +77,7 @@ const PokemonDetailContent = ({ id }: { id: number }) => {
 
       <div>
         <h3 className="mb-1 text-sm font-semibold text-gray-900">
-          Habilidades
+          Abilities
         </h3>
         <p className="text-sm text-gray-600 capitalize">
           {data.abilities.join(', ')}
