@@ -1,6 +1,8 @@
 # QueryDex
 
-Estudo de React Query (@tanstack/react-query v5) consumindo a [PokéAPI](https://pokeapi.co), com Vite, React 19, TypeScript e Tailwind CSS 4.
+Um dex de pokémons construído como estudo de React Query (@tanstack/react-query v5), consumindo a [PokéAPI](https://pokeapi.co). Stack: Vite, React 19, TypeScript e Tailwind CSS 4.
+
+Na prática, o app é uma lista infinita de pokémons onde cada card abre um modal de detalhes com stats, species e cadeia de evolução — tudo em cache: reabrir é instantâneo, hover nas evoluções pré-carrega, e a busca tem debounce com tratamento de 404.
 
 Este README documenta os fluxos da aplicação e, para cada um, **onde** cada função da lib foi usada e **por quê** — o problema concreto que cada conceito resolveu.
 
@@ -10,6 +12,23 @@ Este README documenta os fluxos da aplicação e, para cada um, **onde** cada fu
 npm install
 npm run dev
 ```
+
+## Guia rápido de conceitos
+
+| Conceito                              | Onde vive no app                                    | O que resolveu                                                |
+| ------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| `QueryClient` + `QueryClientProvider` | `providers/query-provider.tsx`                      | Cache único compartilhado por lista, modal, search e prefetch |
+| `useInfiniteQuery`                    | `hooks/useInfiniteFetch.ts` + `usePokemonsInfinite` | Lista de 1351 pokémons que acumula páginas                    |
+| `useSuspenseQuery`                    | `hooks/useSuspenseFetch.ts` + seções do modal       | Seções independentes com skeleton, streaming                  |
+| `ErrorBoundary` + Suspense            | `components/ui/error-boundary.tsx`                  | Erro derruba só a seção, não a página                         |
+| `useQueryClient` (imperativo)         | `hooks/pokemon/usePrefetchPokemon.ts`               | Hover pré-carrega o cache, click abre sem skeleton            |
+| Query Key Factory                     | `hooks/pokemon/pokemon-keys.ts`                     | Keys sincronizadas entre hooks e prefetch                     |
+| `placeholderData` (keepPreviousData)  | `useFetch` (usado na v1 da paginação)               | Lista não "piscava" entre páginas                             |
+| `enabled`                             | `useFetch`, usado no search                         | Query idle com input vazio                                    |
+| `ApiError` + `status`                 | `api/pokemon.api.ts`                                | 404 discriminado de erro genérico                             |
+| `staleTime` / `gcTime`                | defaults do provider / opção `noCache`              | Cache fresco por 1 min; dado nasce stale                      |
+| Debounce                              | `hooks/use-debounce.ts`                             | 1 request por digitação, não por tecla                        |
+| `AbortSignal`                         | `queryFunction` de todos os hooks                   | Fetch abortado no unmount                                     |
 
 ## Os fluxos e o que cada um ensina
 
@@ -33,7 +52,7 @@ Dois detalhes de setup que evitaram bugs reais:
 Como a lib sabe qual é a próxima página — os 2 parâmetros required no v5:
 
 - `initialPageParam: 0` — o primeiro fetch parte do offset 0.
-- `getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined` — chamado após cada fetch. A PokéAPI sinaliza fim com `next: null` no domínio, mas a lib só entende `undefined` como "acabou" — daí o `?? undefined`. Esse detalhe silencioso fez o botão "Load more" funcionar até a última página.
+- `getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined` — chamado após cada fetch. A PokéAPI sinaliza fim com `next: null` no domínio, mas a lib só entende `undefined` como "acabou" — daí o `?? undefined`. Detalhe silencioso: sem ele, o scroll nunca para de pedir páginas.
 - `queryFn` recebe `pageParam` no contexto junto com o `signal`: o hook repassa e o fetch usa como `offset`.
 
 **O scroll:** `useInfiniteScroll` observa um sentinel no fim do grid com `IntersectionObserver` e chama `fetchNextPage` quando ele entra na viewport (`rootMargin: 200px` pré-carrega antes de o usuário chegar). As guardas `hasNextPage && !isFetchingNextPage` evitam requests duplicados. Não é da lib — é o complemento de UI que o infinite query pede.
@@ -111,7 +130,7 @@ Nenhum componente importa `@tanstack/react-query` diretamente. A lib aparece em 
 - `useSuspenseFetch` → `useSuspenseQuery`: retorno `{ data }` sem flags — o Suspense e o ErrorBoundary assumem loading e erro.
 - `useInfiniteFetch` → `useInfiniteQuery`: repassa `initialPageParam`/`getNextPageParam` (required no v5) e expõe `hasNextPage`/`fetchNextPage`/`isFetchingNextPage`.
 
-Cada wrapper traduz o contrato do projeto (nomes em português do domínio: `queryFunction`, `key`, `noCache`) para as opções da lib. Trocar de lib de data-fetching exigiria mexer nesses arquivos — os componentes nem ficariam sabendo.
+Cada wrapper traduz o contrato do projeto (`queryFunction`, `key`, `noCache`) para as opções da lib. Trocar de lib de data-fetching exigiria mexer nesses arquivos — os componentes nem ficariam sabendo.
 
 ## Estrutura
 
@@ -130,3 +149,24 @@ src/
 ```
 
 Camadas: componente → hook de domínio → wrapper da lib → API function → PokéAPI → mapper → domínio. Os mappers fazem o trabalho sujo (extração de ID da URL, conversão de unidades, filtro de idioma do flavor text, formatação de triggers de evolução) — os componentes recebem o domínio pronto.
+
+## Bugs reais que a construção do projeto revelou
+
+Lições que ficaram dos bugs encontrados durante o desenvolvimento — vale registrar porque são os erros mais comuns com a lib:
+
+- **`isFetching` fora das deps do `useMemo`** — o indicador "updating" da paginação nunca aparecia: o valor estava no objeto retornado, mas o memo não recalculava. Toda dependência usada precisa estar nas deps.
+- **`offeset` (typo) no `URLSearchParams`** — não compila? compila. A API ignora o param desconhecido e usa offset 0 sempre: todas as páginas retornavam os mesmos 20 pokémons, silenciosamente.
+- **`null` vs `undefined` no `getNextPageParam`** — a API sinaliza fim com `null`, a lib só entende `undefined`: sem o `??`, o scroll nunca acabava.
+- **`data` não narrowa via flags booleanas** — `if (isLoading) return ...` não faz o TS saber que `data` existe depois; daí os `?? []` / `?? 0` nos props.
+- **Hook `useSuspenseQuery` fora do `<Suspense>`** — se o hook mora no componente errado, o overlay inteiro pisca em vez de só a seção.
+
+## O que explorar depois
+
+Caminhos de estudo que ficaram de fora do escopo, documentados como próximos passos:
+
+- **React Query Devtools** (`@tanstack/react-query-devtools`) — inspecionar o cache visualmente: keys, status, stale/fetching em tempo real.
+- **`refetchOnWindowFocus: true`** — reativar pra observar o refetch ao alternar abas e entender o comportamento que foi desligado no setup.
+- **`invalidateQueries` por escopo** — usar a hierarquia de keys pra invalidar `['pokemon']` inteiro e ver todos os hooks refetchando.
+- **`select` no `useQuery`** — transformar o dado na camada da lib (e o impacto nos tipos do wrapper).
+- **Validação runtime com Zod** — os tipos dos raw responses são promessas de tipo; o Zod validaria em runtime na fronteira da API.
+- **Busca parcial client-side** — filtrar a lista já carregada (a PokéAPI não tem fuzzy match; `/pokemon-species?limit=1025` dá todos os nomes).
