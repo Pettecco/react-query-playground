@@ -1,5 +1,5 @@
-import { TYPE_COLORS } from '../types/type-colors';
-import { usePokemonDetail } from '../hooks';
+import { TYPE_COLORS } from '../../types/type-colors';
+import { usePokemonDetail } from '../../hooks';
 
 interface PokemonDetailContentProps {
   id: number;

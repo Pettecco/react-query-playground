@@ -1,5 +1,5 @@
-import type { Pokemon } from '../types';
-import { PokemonCard } from './PokemonCard';
+import type { Pokemon } from '../../types';
+import { PokemonCard } from './pokemon-card';
 
 interface PokemonGridProps {
   pokemons: Pokemon[];

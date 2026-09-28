@@ -1,4 +1,4 @@
-import { usePokemonSpecies } from '../hooks';
+import { usePokemonSpecies } from '../../hooks';
 
 interface PokemonSpeciesContentProps {
   id: number;

@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
-import type { Pokemon } from '../types';
-import { ErrorBoundary } from './ErrorBoundary';
-import { ModalShell } from './ModalShell';
-import { PokemonDetailSkeleton } from './PokemonDetailSkeleton';
+import type { Pokemon } from '../../types';
+import { ErrorBoundary } from '../ui/error-boundary';
+import { ModalShell } from '../ui/modal-shell';
+import { PokemonDetailSkeleton } from './pokemon-detail-skeleton';
 import { PokemonDetailContent } from './pokemon-detail-content';
 import { PokemonSpeciesContent } from './pokemon-species-content';
 import { PokemonEvolutionContent } from './pokemon-evolution-content';

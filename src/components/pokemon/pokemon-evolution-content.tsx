@@ -1,5 +1,9 @@
-import type { Pokemon } from '../types';
-import { useEvolutionChain, usePokemonSpecies } from '../hooks';
+import type { Pokemon } from '../../types';
+import {
+  useEvolutionChain,
+  usePokemonSpecies,
+  usePrefetchPokemon,
+} from '../../hooks';
 
 interface PokemonEvolutionContentProps {
   id: number;
@@ -35,6 +39,8 @@ const EvolutionChainContent = ({
 }: EvolutionChainContentProps) => {
   const { data: evolutions } = useEvolutionChain(url);
 
+  const prefetch = usePrefetchPokemon();
+
   if (evolutions.length <= 1) {
     return null;
   }
@@ -58,6 +64,7 @@ const EvolutionChainContent = ({
               </div>
             )}
             <button
+              onMouseEnter={() => prefetch(evolution.speciesId)}
               onClick={() =>
                 onSelect?.({
                   id: evolution.speciesId,
