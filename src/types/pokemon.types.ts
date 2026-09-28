@@ -40,6 +40,7 @@ export interface PokemonPage {
   pokemons: Pokemon[];
   count: number;
   hasNext: boolean;
+  nextOffset: number | null;
 }
 
 export interface PokemonDetail {

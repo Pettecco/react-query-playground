@@ -5,7 +5,9 @@ import type {
   PokemonDetail,
   PokemonDetailResponse,
   PokemonEvolution,
+  PokemonListResponse,
   PokemonListItemRaw,
+  PokemonPage,
   PokemonSpecies,
   PokemonSpeciesResponse,
 } from '../types/pokemon.types';
@@ -20,6 +22,19 @@ export const mapPokemonListItem = (raw: PokemonListItemRaw): Pokemon => {
     id,
     name: raw.name,
     imageUrl: `${SPRITES_URL}/${id}.png`,
+  };
+};
+
+export const mapPokemonListPage = (raw: PokemonListResponse): PokemonPage => {
+  const nextOffset = raw.next
+    ? Number(new URL(raw.next).searchParams.get('offset'))
+    : null;
+
+  return {
+    pokemons: raw.results.map(mapPokemonListItem),
+    count: raw.count,
+    hasNext: raw.next !== null,
+    nextOffset,
   };
 };
 

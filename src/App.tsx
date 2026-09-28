@@ -1,21 +1,32 @@
 import { useState } from 'react';
-import { usePokemons } from './hooks';
-import { POKEMON_LIMIT } from './api';
+import { usePokemonsInfinite, useInfiniteScroll } from './hooks';
 import type { Pokemon } from './types';
 import {
   ErrorState,
   LoadingState,
-  Pagination,
   PokemonGrid,
   PokemonModal,
 } from './components';
 
 function App() {
-  const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Pokemon | null>(null);
 
-  const { data, isLoading, isError, error, isFetching, refetch } =
-    usePokemons(page);
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetch,
+  } = usePokemonsInfinite();
+
+  const sentinelRef = useInfiniteScroll({
+    hasNextPage,
+    isFetchingNextPage,
+    onIntersect: () => fetchNextPage(),
+  });
 
   if (isLoading) {
     return <LoadingState message="Loading pokémons..." />;
@@ -27,23 +38,20 @@ function App() {
 
   return (
     <div className="mx-auto max-w-5xl p-8">
-      <div className="mb-6 flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold">QueryDex</h1>
-        {isFetching && (
+      <h1 className="mb-6 text-2xl font-bold">QueryDex</h1>
+
+      <PokemonGrid
+        pokemons={data?.pages.flatMap(page => page.pokemons) ?? []}
+        onSelect={setSelected}
+      />
+
+      <div ref={sentinelRef} className="flex justify-center p-4">
+        {isFetchingNextPage && (
           <span className="text-sm text-gray-400 animate-pulse">
-            Updating...
+            Loading more pokémons...
           </span>
         )}
       </div>
-
-      <PokemonGrid pokemons={data?.pokemons ?? []} onSelect={setSelected} />
-
-      <Pagination
-        page={page}
-        totalPages={Math.ceil((data?.count ?? 0) / POKEMON_LIMIT)}
-        hasNext={data?.hasNext ?? false}
-        onPageChange={setPage}
-      />
 
       {selected && (
         <PokemonModal

@@ -39,6 +39,17 @@ export function getPokemons(
   return request<PokemonListResponse>(`/pokemon?${params}`, { signal });
 }
 
+export function getPokemonsByOffset(
+  offset: number,
+  signal?: AbortSignal
+): Promise<PokemonListResponse> {
+  const params = new URLSearchParams({
+    offset: String(offset),
+    limit: String(POKEMON_LIMIT),
+  });
+  return request<PokemonListResponse>(`/pokemon?${params}`, { signal });
+}
+
 export function getPokemon(
   id: number,
   signal?: AbortSignal

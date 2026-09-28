@@ -1,4 +1,4 @@
-export * from './usePokemons';
+export * from './usePokemonsInfinite';
 export * from './usePokemonDetail';
 export * from './usePokemonSpecies';
 export * from './useEvolutionChain';
