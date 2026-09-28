@@ -27,7 +27,7 @@ export const ModalShell = ({ onClose, children }: ModalShellProps) => {
         <button
           onClick={onClose}
           aria-label="Close modal"
-          className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-900"
+          className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full  text-gray-500 transition-colors hover:text-gray-900"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
