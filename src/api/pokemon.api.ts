@@ -57,6 +57,13 @@ export function getPokemon(
   return request<PokemonDetailResponse>(`/pokemon/${id}`, { signal });
 }
 
+export function getPokemonByName(
+  name: string,
+  signal?: AbortSignal
+): Promise<PokemonDetailResponse> {
+  return request<PokemonDetailResponse>(`/pokemon/${name}`, { signal });
+}
+
 export function getPokemonSpecies(
   id: number,
   signal?: AbortSignal

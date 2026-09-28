@@ -3,3 +3,4 @@ export * from './usePokemonDetail';
 export * from './usePokemonSpecies';
 export * from './useEvolutionChain';
 export * from './usePrefetchPokemon';
+export * from './use-search-pokemon';

@@ -8,5 +8,5 @@ export const usePokemonsInfinite = () =>
     queryFunction: ({ signal, pageParam }) =>
       getPokemonsByOffset(pageParam as number, signal).then(mapPokemonListPage),
     initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
+    getNextPageParam: lastPage => lastPage.nextOffset ?? undefined,
   });
