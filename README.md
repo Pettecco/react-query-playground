@@ -2,44 +2,7 @@
 
 Estudo de React Query (@tanstack/react-query v5) consumindo a [PokéAPI](https://pokeapi.co), com Vite, React 19, TypeScript e Tailwind CSS 4.
 
-## Features
-
-- Listagem infinita de pokémons (68 páginas, scroll infinito)
-- Modal de detalhes com dados instantâneos (header via props) + seções em Suspense (stats, species, evoluções)
-- Skeletons independentes por seção (streaming de queries)
-- Prefetch no hover das evoluções (cache hit no click)
-- Navegação entre evoluções via cache
-- Busca por nome com debounce e tratamento de 404
-- Cache global com staleTime de 1 minuto
-
-## Arquitetura
-
-```
-Components (ui/ genéricos + pokemon/ domínio)
-    ↓
-Hooks de domínio → Wrappers da lib (useFetch, useSuspenseFetch, useInfiniteFetch)
-    ↓
-API (request<T> + ApiError + mappers) → PokéAPI
-```
-
-A lib fica confinada em 4 arquivos: `providers/query-provider.tsx` + os 3 wrappers em `src/hooks/`. Nenhum componente importa `@tanstack/react-query` diretamente — trocar de lib de data-fetching exigiria mexer só nesses arquivos.
-
-```
-src/
-├── api/                  # request helper, ApiError, mappers
-├── components/
-│   ├── ui/               # ModalShell, ErrorBoundary, LoadingState, ErrorState, SearchInput
-│   └── pokemon/          # PokemonCard, PokemonGrid, PokemonModal, contents
-├── hooks/
-│   ├── useFetch.ts           # wrapper de useQuery
-│   ├── useSuspenseFetch.ts   # wrapper de useSuspenseQuery
-│   ├── useInfiniteFetch.ts   # wrapper de useInfiniteQuery
-│   ├── useInfiniteScroll.ts  # IntersectionObserver
-│   ├── use-debounce.ts       # debounce genérico
-│   └── pokemon/              # hooks de domínio + pokemon-keys.ts
-├── providers/            # QueryProvider (QueryClientProvider)
-└── types/                # raw responses, domínio, type-colors
-```
+Este README documenta os fluxos da aplicação e, para cada um, **onde** cada função da lib foi usada e **por quê** — o problema concreto que cada conceito resolveu.
 
 ## Como rodar
 
@@ -48,90 +11,85 @@ npm install
 npm run dev
 ```
 
-## Funções da lib exploradas
+## Os fluxos e o que cada um ensina
 
-### `QueryClient` + `QueryClientProvider`
+### 1. Abrir a aplicação: o provider
 
-O `QueryClient` é o cache da aplicação: um mapa de query key para estado (dados, status, timestamps). Controla deduplicação de requests, retries e notifica componentes quando o cache muda. O `QueryClientProvider` injeta essa instância na árvore via Context — sem ele, os hooks lançam `No QueryClient set`.
+**Onde:** `src/providers/query-provider.tsx`, usado no `main.tsx`.
 
-O client é criado dentro de `useState(() => new QueryClient(...))` no `QueryProvider`: o lazy initializer garante referência estável (um client novo a cada render zeraria o cache e causaria refetch infinito). Os defaults globais ficam aqui:
+Todo o estado de cache da aplicação vive em uma única instância de `QueryClient`. O `QueryClientProvider` injeta essa instância na árvore via Context — sem ele, qualquer `useQuery` lança `No QueryClient set`. É ele que garante que a lista, o modal, o search e o prefetch compartilham **o mesmo cache**: abrir o mesmo pokémon pelo modal ou pela busca é cache hit porque ambos leem do mesmo mapa.
 
-```ts
-staleTime: 60 * 1000,        // dado fresco por 1 min; remount dentro do período não refetcha
-retry: 1,                    // 1 retry em vez dos 3 padrão (backoff exponencial)
-refetchOnWindowFocus: false, // sem refetch ao alternar abas
-```
+Dois detalhes de setup que evitaram bugs reais:
 
-### `useQuery`
+- O client é criado **dentro** de `useState(() => new QueryClient(...))`. Se fosse no corpo do componente, cada render criaria um client novo, zerando o cache — refetch infinito.
+- Os defaults globais vivem aqui, não espalhados pelos hooks: `staleTime: 60_000` (mata o double-fetch do StrictMode no dev), `retry: 1` (falha rápida na PokéAPI, os 3 retries padrão com backoff demoram demais) e `refetchOnWindowFocus: false` (sem requests surpresa ao alternar entre a aba e o devtools).
 
-A query declarativa básica. Recebe um objeto com `queryKey` (identidade no cache) e `queryFn` (função async que busca os dados), e retorna o estado da query:
+### 2. Listagem infinita: `useInfiniteQuery` + IntersectionObserver
 
-```ts
-const { data, isLoading, isError, error, isFetching, refetch } = useQuery({ ... });
-```
+**Onde:** `src/hooks/useInfiniteFetch.ts` (wrapper), `src/hooks/pokemon/usePokemonsInfinite.ts` (domínio), `src/hooks/useInfiniteScroll.ts`, usado no `App.tsx`.
 
-- `queryKey` é um array — cada mudança de key cria uma entrada de cache diferente (`['pokemon', 25]` ≠ `['pokemon', 26]`). Keys idênticas são deduplicadas automaticamente.
-- `queryFn` recebe um contexto com `AbortSignal` — o fetch é abortado quando o componente desmonta ou a query é substituída.
-- `isLoading` = sem dados + buscando (primeira carga). `isFetching` = buscando (inclui refetch em background com dados já visíveis).
-- `refetch()` força o fetch ignorando staleTime.
+**Por que infinite query:** a PokéAPI lista 1351 pokémons. Paginação com botões prev/next foi a primeira versão, mas exigia manter `page` em `useState` e a lista "piscava" entre páginas. O `useInfiniteQuery` substitui isso: a lib gerencia o `pageParam`, e o resultado **acumula** em `data.pages` em vez de trocar.
 
-O `useFetch` do projeto é um wrapper desse hook: traduz o contrato próprio (`key`, `queryFunction`, `noCache`, `keepPreviousData`) para as opções da lib e adapta o `signal`.
+Como a lib sabe qual é a próxima página — os 2 parâmetros required no v5:
 
-### `placeholderData: keepPreviousData`
+- `initialPageParam: 0` — o primeiro fetch parte do offset 0.
+- `getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined` — chamado após cada fetch. A PokéAPI sinaliza fim com `next: null` no domínio, mas a lib só entende `undefined` como "acabou" — daí o `?? undefined`. Esse detalhe silencioso fez o botão "Load more" funcionar até a última página.
+- `queryFn` recebe `pageParam` no contexto junto com o `signal`: o hook repassa e o fetch usa como `offset`.
 
-Opção usada na paginação tradicional (antes da migração pro infinite): enquanto a nova key carrega, a lib serve os dados da query anterior em vez de `undefined`. Sem ela, trocar de página fazia a lista "piscar" no loading. Com ela, `isLoading` fica `false` e `isFetching` fica `true` — o indicador "atualizando" usava essa combinação.
+**O scroll:** `useInfiniteScroll` observa um sentinel no fim do grid com `IntersectionObserver` e chama `fetchNextPage` quando ele entra na viewport (`rootMargin: 200px` pré-carrega antes de o usuário chegar). As guardas `hasNextPage && !isFetchingNextPage` evitam requests duplicados. Não é da lib — é o complemento de UI que o infinite query pede.
 
-### `useSuspenseQuery`
+**Camadas envolvidas:** `getPokemonsByOffset` na API, `mapPokemonListPage` no mapper (extrai o `nextOffset` da URL `next` com `new URL().searchParams`), e `nextOffset` no domínio `PokemonPage`. A UI nunca vê o raw da API.
 
-Variante que integra com React Suspense: enquanto a promise está pendente, o hook lança a promise e o `<Suspense fallback={...}>` mais próximo segura o render. Erros sobem como exceções de render e são capturados por um `ErrorBoundary`.
+### 3. Click no card: modal com cache + Suspense
 
-A diferença chave na tipagem: `data` sai como `Data` (não `Data | undefined`) — o Suspense garante que o componente só renderiza com dados prontos. Por isso o wrapper `useSuspenseFetch` retorna `{ data }` sem flags de loading/erro: loading é responsabilidade do `fallback`, erro do `ErrorBoundary`.
+**Onde:** `src/components/pokemon/pokemon-modal.tsx`, `src/hooks/pokemon/usePokemonDetail.ts` e `usePokemonSpecies.ts` (via `useSuspenseFetch`), `src/components/ui/error-boundary.tsx`.
 
-No modal, cada seção (stats, species, evoluções) tem seu próprio `<ErrorBoundary><Suspense>` — as queries rodam em paralelo e a que resolver primeiro aparece primeiro, com skeleton independente.
+**O problema:** o header do modal (nome, id, imagem) tem dados instantâneos (vêm do card via props), mas stats, species e evoluções precisam de mais 2-3 requests. Mostrar nada enquanto isso carrega é ruim; bloquear o modal inteiro também.
 
-### `ErrorBoundary` + Suspense
+**A solução com `useSuspenseQuery`:** cada seção tem seu próprio `<ErrorBoundary><Suspense>` e roda em paralelo. Enquanto a promise está pendente, o hook lança a promise e o `<Suspense fallback>` daquela seção segura o render — as seções aparecem **na ordem em que resolvem**, cada uma com seu skeleton. Streaming de queries de graça.
 
-`useSuspenseQuery` exige os dois lados do mecanismo: o `<Suspense>` captura a promise pendente, e o `ErrorBoundary` (class component com `getDerivedStateFromError`) captura a exceção de render em caso de erro — sem boundary, um erro no fetch derrubaria a página inteira em vez de só a seção do modal.
+A diferença de contrato que justifica um wrapper separado (`useSuspenseFetch` em vez de `useFetch`): `data` sai tipado como `Data`, não `Data | undefined` — o Suspense garante que o componente só renderiza com dados prontos. Loading e erro saem do retorno do hook: loading vira `fallback` do Suspense, erro vira exceção que o ErrorBoundary captura (via `getDerivedStateFromError`). Sem o boundary, um erro no fetch derrubaria a página inteira em vez de só a seção.
 
-### `useInfiniteQuery`
+**O cache aqui é o protagonista:** dentro do `staleTime` de 1 minuto, fechar e reabrir o mesmo pokémon é cache hit puro — zero requests, zero skeleton. O `['pokemon', id]` e `['pokemon-species', id]` já estão no cache da primeira visita.
 
-Query que acumula páginas. Diferente do `useQuery`, exige dois parâmetros adicionais (ambos required no v5):
+### 4. Hover nas evoluções: prefetch imperativo
 
-```ts
-useInfiniteQuery({
-  queryKey,
-  queryFn: ({ signal, pageParam }) => ...,  // a lib injeta o pageParam no contexto
-  initialPageParam: 0,                      // primeiro pageParam
-  getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
-});
-```
+**Onde:** `src/hooks/pokemon/usePrefetchPokemon.ts`, usado em `pokemon-evolution-content.tsx`.
 
-- `getNextPageParam` é chamado após cada fetch para calcular o próximo `pageParam`. Retornar `undefined` sinaliza fim — `hasNextPage` vira `false`. Detalhe importante: `null` não sinaliza fim, só `undefined` (daí o `?? undefined`).
-- `data.pages` é o array com o retorno de cada fetch (acumula). `data.pageParams` guarda os params usados.
-- `fetchNextPage()` dispara o próximo fetch usando o pageParam calculado. `isFetchingNextPage` é exclusivo desse fetch (distinto de `isLoading`).
+**O problema:** navegar entre evoluções (Bulbasaur → Ivysaur → Venusaur) significa que cada click dispara fetches do zero — o usuário vê skeletons a cada troca.
 
-O `useInfiniteFetch` do projeto repassa `initialPageParam`/`getNextPageParam` ao caller (são required) e expõe o shape de saída tipado. O `pageParam` chega como `unknown` — o caller faz o cast.
-
-### `useInfiniteScroll` (padrão complementar)
-
-Não é da lib: um hook com `IntersectionObserver` que observa um sentinel no fim da lista e dispara `fetchNextPage` quando ele entra na viewport (`rootMargin: 200px` pré-carrega antes de chegar), com guarda `hasNextPage && !isFetchingNextPage`.
-
-### `useQueryClient` + operações imperativas
-
-Enquanto `useQuery` é declarativo (render baseado em estado), `useQueryClient` retorna a instância do client para operações imperativas no cache. Usado no `usePrefetchPokemon`:
+**A solução:** `useQueryClient` dá acesso imperativo ao cache. No `onMouseEnter` de cada evolução, o `usePrefetchPokemon` aquece o cache com detail + species:
 
 ```ts
-queryClient.query({ queryKey, queryFn }).catch(noop);
+queryClient.query({ queryKey: pokemonKeys.detail(id), queryFn: ... }).catch(noop);
 ```
 
-- `queryClient.query` é o substituto do deprecado `fetchQuery`/`prefetchQuery` no v5.103: busca fora do ciclo do observer e escreve o resultado no cache, que notifica os hooks automaticamente.
-- Diferente do `useQuery`, a promise **rejeita** em erro — por isso o `.catch(noop)`: erro de prefetch não deve quebrar nada, o click de verdade refetcha.
-- Prefetch é fire-and-forget: não retorna dado pra render, só popula o cache. Respeita staleTime (hover repetido = 1 request, dedup).
-- Outras operações imperativas usadas nos estudos: `cancelQueries` (mata fetch em voo), `invalidateQueries` (força refetch).
+- `queryClient.query` é o substituto do deprecado `prefetchQuery` no v5.103: busca fora do ciclo de render e escreve no cache, que notifica os hooks automaticamente. Fire-and-forget: não retorna dado pra render.
+- O `.catch(noop)` é explícito porque, diferente do `useQuery`, essa promise **rejeita** em erro. Prefetch que falha não deve quebrar nada — o click de verdade refetcha.
+- Respeita `staleTime`: passar o mouse 5x na mesma evolução é 1 request (dedup).
+- Resultado: quando o usuário clica, as queries já estão no cache — o modal abre sem nenhum skeleton. O fetch foi pago durante o hover, escondido atrás do tempo de reação humana.
 
-### Query Key Factory
+**Por que wrapper próprio (`usePrefetchPokemon`) em vez de `useQueryClient` direto no componente:** o prefetch precisa usar exatamente a mesma key e a mesma forma de saída (`mapPokemonDetail`) que os hooks leitores. O wrapper concentra esse espelho em um lugar — se a key mudar sem o outro lado, o cache hit quebra silenciosamente.
 
-Padrão recomendado pela doc oficial do TanStack para centralizar keys — uma única fonte de verdade que hooks leitores e writers do cache compartilham:
+### 5. Busca: debounce + `enabled` + 404
+
+**Onde:** `src/hooks/use-debounce.ts`, `src/hooks/pokemon/use-search-pokemon.ts`, `src/api/pokemon.api.ts`, usado no `App.tsx`.
+
+**O problema:** a busca da PokéAPI é match exato por nome (`/pokemon/pikachu` → 200, `/pokemon/pika` → 404). Buscar a cada tecla dispara requests inúteis ("p", "pi", "pik"...), e um 404 sem tratamento ficaria cacheado como dado de sucesso.
+
+**Três conceitos em sequência resolvem:**
+
+1. **Debounce (`useDebounce`):** cada tecla limpa o `setTimeout` da anterior no cleanup do `useEffect` — só a última sobrevive. Digitar rápido = 1 request. É o mesmo padrão mental de cancelamento do `AbortSignal` da lib.
+2. **`enabled: name.length > 0`:** a opção liga/desliga a query — com input vazio ela nem executa (`fetchStatus: 'idle'`), sem precisar renderizar condicional pra evitar o hook.
+3. **404 (`ApiError`):** `fetch` resolve normalmente em 4xx — sem tratamento, "pikachuuu" ficaria no cache como dado de sucesso e o estado de "não encontrado" nunca existiria. O helper `request<T>` lança `ApiError(status)` quando `!res.ok`, e a UI discrimina: `instanceof ApiError && error.status === 404` → "No pokémon found" (estado esperado) vs erro genérico.
+
+**Query key dinâmica:** a key do search é `pokemonKeys.search(name)` → `['pokemon', 'search', name]`. Cada termo é uma entrada de cache própria — buscar "pika" e "pikachu" são 2 caches; buscar "pikachu" de novo é cache hit. O namespace `'search'` evita colisão com `['pokemon', 25]` do detail por id (formas divergentes: um espera id number, outro nome).
+
+### 6. As keys: query key factory
+
+**Onde:** `src/hooks/pokemon/pokemon-keys.ts`.
+
+Todos os pontos do app que leem ou escrevem cache usam a mesma factory:
 
 ```ts
 export const pokemonKeys = {
@@ -143,32 +101,32 @@ export const pokemonKeys = {
 };
 ```
 
-Sem isso, o prefetch duplicaria keys hardcoded — se uma mudasse sem a outra, o cache hit serviria a forma errada silenciosamente. A hierarquia de keys também permite invalidação por escopo (`['pokemon']` invalida detail e search de uma vez).
+Sem isso, o prefetch duplicaria keys hardcoded dos hooks — se uma mudasse sem a outra, o cache hit serviria a forma errada silenciosamente. A hierarquia também permite invalidar por escopo: `['pokemon']` derruba detail e search de uma vez.
 
-### `staleTime` vs `gcTime`
+## Os wrappers: por que a lib fica confinada
 
-Os dois tempos do cache: `staleTime` define por quanto tempo um dado é considerado fresco (dentro do período, remount/focus não refetcha). `gcTime` define quanto tempo uma entrada sem observers permanece no cache antes de ser removida. A opção `noCache: true` do `useFetch` usa ambos em `0` — dado nasce stale e a entrada é removida no unmount.
+Nenhum componente importa `@tanstack/react-query` diretamente. A lib aparece em 4 arquivos: o provider e os 3 wrappers (`useFetch`, `useSuspenseFetch`, `useInfiniteFetch`) — todos em `hooks/` + `providers/`.
 
-### `enabled`
+- `useFetch` → `useQuery`: contrato próprio (`key`, `queryFunction`, `noCache`, `enabled`, `keepPreviousData`), adaptação do `signal` definida uma vez, retorno memoizado com `useCallback`/`useMemo` (referências estáveis pros consumidores).
+- `useSuspenseFetch` → `useSuspenseQuery`: retorno `{ data }` sem flags — o Suspense e o ErrorBoundary assumem loading e erro.
+- `useInfiniteFetch` → `useInfiniteQuery`: repassa `initialPageParam`/`getNextPageParam` (required no v5) e expõe `hasNextPage`/`fetchNextPage`/`isFetchingNextPage`.
 
-Opção que liga/desliga a query: com `false`, a query não executa (`fetchStatus: 'idle'`). Usada no search (`enabled: name.length > 0`) — a query não roda com input vazio. É a forma declarativa de "só buscar quando faz sentido".
+Cada wrapper traduz o contrato do projeto (nomes em português do domínio: `queryFunction`, `key`, `noCache`) para as opções da lib. Trocar de lib de data-fetching exigiria mexer nesses arquivos — os componentes nem ficariam sabendo.
 
-### 404 handling (`fetch` não lança em 404)
+## Estrutura
 
-`fetch` resolve normalmente em respostas 4xx/5xx — sem tratamento, um 404 ficaria cacheado como dado de sucesso. O helper `request<T>` da camada de API lança `ApiError(status, message)` quando `!res.ok`:
-
-```ts
-export class ApiError extends Error {
-  readonly status: number;
-}
+```
+src/
+├── api/                  # request<T>, ApiError, mappers (raw → domínio)
+├── components/
+│   ├── ui/               # ModalShell, ErrorBoundary, LoadingState, ErrorState, SearchInput
+│   └── pokemon/          # PokemonCard, PokemonGrid, PokemonModal + contents por seção
+├── hooks/
+│   ├── useFetch.ts, useSuspenseFetch.ts, useInfiniteFetch.ts
+│   ├── useInfiniteScroll.ts, use-debounce.ts
+│   └── pokemon/          # hooks de domínio + pokemon-keys.ts + usePrefetchPokemon
+├── providers/            # QueryProvider (QueryClient + defaults globais)
+└── types/                # raw responses, domínio, type-colors
 ```
 
-A UI discrimina com `instanceof ApiError && error.status === 404` — "No pokémon found" (estado esperado) vs erro genérico. Isso requer `erasableSyntaxOnly`-safe TS (field declaration explícita em vez de parameter properties).
-
-### Debounce (cleanup do useEffect)
-
-O debounce do search usa o padrão de cleanup: cada mudança de valor limpa o `setTimeout` da anterior no return do `useEffect` — só a última tecla sobrevive. Mesmo padrão mental de cancelamento do `AbortSignal` da lib.
-
-### Cache entre componentes
-
-O modal de detalhes é o exemplo do cache compartilhado: o header do modal renderiza instantaneamente com os dados da lista (props), enquanto as seções Suspense buscam `['pokemon', id]` e `['pokemon-species', id]`. Reabrir o mesmo pokémon dentro do staleTime é cache hit puro — zero requests. Navegar entre evoluções usa o mesmo mecanismo: o click troca o pokémon selecionado e o cache resolve (instantâneo se visitado, fetch se não).
+Camadas: componente → hook de domínio → wrapper da lib → API function → PokéAPI → mapper → domínio. Os mappers fazem o trabalho sujo (extração de ID da URL, conversão de unidades, filtro de idioma do flavor text, formatação de triggers de evolução) — os componentes recebem o domínio pronto.
